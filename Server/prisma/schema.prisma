@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoomType {
+  standard
+  junior
+  suite
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique // External user ID
+  balance   Int
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  bookings Booking[]
+
+  @@map("users")
+}
+
+model Room {
+  id            Int       @id @default(autoincrement())
+  roomNumber    Int       @unique
+  type          RoomType
+  pricePerNight Int
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  bookings Booking[]
+
+  @@map("rooms")
+}
+
+model Booking {
+  id                Int       @id @default(autoincrement())
+  userId            Int
+  roomId            Int
+  userBalanceAtBooking Int    @map("user_balance_at_booking")
+  roomTypeAtBooking RoomType @map("room_type_at_booking")
+  roomPriceAtBooking Int      @map("room_price_at_booking")
+  checkIn           DateTime
+  checkOut          DateTime
+  totalPrice        Int
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
