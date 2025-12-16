@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './routes/authRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
@@ -14,7 +15,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Public routes (authentication)
+app.use('/auth', authRoutes);
+
+// Protected routes
 app.use('/rooms', roomRoutes);
 app.use('/users', userRoutes);
 app.use('/bookings', bookingRoutes);

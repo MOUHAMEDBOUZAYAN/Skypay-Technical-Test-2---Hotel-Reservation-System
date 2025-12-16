@@ -1,10 +1,13 @@
 import express from 'express';
 import { setRoom, getAllRooms } from '../controllers/roomController.js';
+import { verifyToken, checkRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/', setRoom);
-router.get('/bookings', getAllRooms);
+// Tous les utilisateurs authentifiés peuvent voir les chambres
+router.get('/bookings', verifyToken, getAllRooms);
+// Seuls les admins peuvent créer/modifier des chambres
+router.post('/', verifyToken, checkRole('admin'), setRoom);
 
 export default router;
 
