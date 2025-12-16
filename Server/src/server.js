@@ -19,6 +19,12 @@ app.use('/rooms', roomRoutes);
 app.use('/users', userRoutes);
 app.use('/bookings', bookingRoutes);
 
+
+if (!process.env.DATABASE_URL) {
+  console.error('❌ ERROR: DATABASE_URL is not defined in .env file');
+  process.exit(1);
+}
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Hotel Reservation System API' });
