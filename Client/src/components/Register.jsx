@@ -15,13 +15,97 @@ const Register = ({ onSwitchToLogin }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [passwordMatch, setPasswordMatch] = useState(true);
+  const [emailError, setEmailError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState({
+    score: 0,
+    feedback: ''
+  });
   const { register } = useAuth();
 
-  // Vérifier si les mots de passe correspondent en temps réel
-  const handlePasswordChange = (field, value) => {
+  // Validation de l'email
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validation de la force du mot de passe
+  const checkPasswordStrength = (password) => {
+    if (!password) {
+      return { score: 0, feedback: '' };
+    }
+
+    let score = 0;
+    const feedback = [];
+
+    if (password.length >= 8) {
+      score += 1;
+    } else {
+      feedback.push('Au moins 8 caractères');
+    }
+
+    if (/[a-z]/.test(password)) {
+      score += 1;
+    } else {
+      feedback.push('Une lettre minuscule');
+    }
+
+    if (/[A-Z]/.test(password)) {
+      score += 1;
+    } else {
+      feedback.push('Une lettre majuscule');
+    }
+
+    if (/[0-9]/.test(password)) {
+      score += 1;
+    } else {
+      feedback.push('Un chiffre');
+    }
+
+    if (/[^a-zA-Z0-9]/.test(password)) {
+      score += 1;
+    } else {
+      feedback.push('Un caractère spécial');
+    }
+
+    let strengthText = '';
+    if (score <= 2) {
+      strengthText = 'Faible';
+    } else if (score === 3) {
+      strengthText = 'Moyen';
+    } else if (score === 4) {
+      strengthText = 'Fort';
+    } else {
+      strengthText = 'Très fort';
+    }
+
+    return {
+      score,
+      feedback: feedback.length > 0 ? feedback.join(', ') : '',
+      strength: strengthText
+    };
+  };
+
+  // Gérer les changements dans les champs
+  const handleFieldChange = (field, value) => {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
 
+    // Validation de l'email
+    if (field === 'email') {
+      if (value.length > 0 && !validateEmail(value)) {
+        setEmailError('Format d\'email invalide');
+      } else {
+        setEmailError('');
+      }
+    }
+
+    // Validation du mot de passe
+    if (field === 'password') {
+      const strength = checkPasswordStrength(value);
+      setPasswordStrength(strength);
+    }
+
+    // Vérifier si les mots de passe correspondent
     if (field === 'confirmPassword' || field === 'password') {
       const pwd = field === 'password' ? value : updatedData.password;
       const confirmPwd = field === 'confirmPassword' ? value : updatedData.confirmPassword;
@@ -31,8 +115,9 @@ const Register = ({ onSwitchToLogin }) => {
       } else {
         setPasswordMatch(true);
       }
-      setError(''); // Effacer l'erreur précédente
     }
+
+    setError(''); // Effacer l'erreur précédente
   };
 
   const handleSubmit = async (e) => {
@@ -40,13 +125,25 @@ const Register = ({ onSwitchToLogin }) => {
     setError('');
     setSuccess('');
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+    // Validation de l'email
+    if (!validateEmail(formData.email)) {
+      setError('Veuillez entrer un email valide');
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+    // Validation du mot de passe fort
+    if (formData.password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    if (passwordStrength.score < 3) {
+      setError('Le mot de passe est trop faible. Il doit contenir au moins : 8 caractères, une majuscule, une minuscule et un chiffre');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
       return;
     }
 
@@ -135,11 +232,18 @@ const Register = ({ onSwitchToLogin }) => {
           <input
             type="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            onChange={(e) => handleFieldChange('email', e.target.value)}
+            className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              emailError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+            }`}
             required
             placeholder="votre@email.com"
           />
+          {emailError && (
+            <p className="mt-1 text-sm text-red-600 flex items-center">
+              <span className="mr-1">⚠️</span> {emailError}
+            </p>
+          )}
         </div>
 
         <div>
@@ -157,17 +261,46 @@ const Register = ({ onSwitchToLogin }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Mot de passe:
+            Mot de passe: <span className="text-red-500">*</span>
           </label>
           <input
             type="password"
             value={formData.password}
-            onChange={(e) => handlePasswordChange('password', e.target.value)}
+            onChange={(e) => handleFieldChange('password', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
             placeholder="••••••••"
-            minLength="6"
+            minLength="8"
           />
+          {formData.password.length > 0 && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600">Force du mot de passe:</span>
+                <span className={`text-xs font-semibold ${
+                  passwordStrength.score <= 2 ? 'text-red-600' :
+                  passwordStrength.score === 3 ? 'text-yellow-600' :
+                  'text-green-600'
+                }`}>
+                  {passwordStrength.strength}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    passwordStrength.score <= 2 ? 'bg-red-500' :
+                    passwordStrength.score === 3 ? 'bg-yellow-500' :
+                    'bg-green-500'
+                  }`}
+                  style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                ></div>
+              </div>
+              {passwordStrength.feedback && (
+                <p className="mt-1 text-xs text-gray-600">
+                  <span className="font-medium">Requis:</span> {passwordStrength.feedback}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
@@ -177,7 +310,7 @@ const Register = ({ onSwitchToLogin }) => {
           <input
             type="password"
             value={formData.confirmPassword}
-            onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+            onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
             className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
               formData.confirmPassword.length > 0
                 ? passwordMatch
@@ -187,7 +320,7 @@ const Register = ({ onSwitchToLogin }) => {
             }`}
             required
             placeholder="••••••••"
-            minLength="6"
+            minLength="8"
           />
           {formData.confirmPassword.length > 0 && !passwordMatch && (
             <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -217,7 +350,7 @@ const Register = ({ onSwitchToLogin }) => {
 
         <button
           type="submit"
-          disabled={loading || !passwordMatch || formData.password.length < 6 || formData.confirmPassword.length === 0}
+          disabled={loading || !passwordMatch || formData.password.length < 8 || formData.confirmPassword.length === 0 || passwordStrength.score < 3 || emailError !== '' || !validateEmail(formData.email)}
           className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {loading ? 'Inscription...' : 'S\'inscrire'}

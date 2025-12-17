@@ -11,10 +11,33 @@ export const register = async (req, res) => {
       });
     }
 
-    if (password.length < 6) {
+    // Validation du format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Le mot de passe doit contenir au moins 6 caractères' 
+        error: 'Format d\'email invalide' 
+      });
+    }
+
+    // Validation du mot de passe fort
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Le mot de passe doit contenir au moins 8 caractères' 
+      });
+    }
+
+    // Vérifier la force du mot de passe
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[^a-zA-Z0-9]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre' 
       });
     }
 
